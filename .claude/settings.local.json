@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node_modules/.bin/vite build *)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}
