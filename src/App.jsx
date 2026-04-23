@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "./supabase.js";
 
 const S = {
   bg: "#000",
@@ -224,13 +225,46 @@ function ManualEntry(props) {
 }
 
 export default function FuelFlow() {
-  var [consumed, setConsumed] = useState({ cal: 560, protein: 54, carbs: 42, fat: 18 });
+  var [consumed, setConsumed] = useState({ cal: 0, protein: 0, carbs: 0, fat: 0 });
   var [history, setHistory] = useState([]);
+  var [loading, setLoading] = useState(true);
   var [ffMode, setFfMode] = useState("best");
   var [selR, setSelR] = useState(null);
   var [logMode, setLogMode] = useState(null);
   var [query, setQuery] = useState("");
   var [toast, setToast] = useState(null);
+
+  // Load today's logs from Supabase on mount
+  useEffect(function() {
+    async function loadToday() {
+      var startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      var { data, error } = await supabase
+        .from("food_logs")
+        .select("*")
+        .gte("logged_at", startOfDay.toISOString())
+        .order("logged_at", { ascending: false });
+
+      if (!error && data) {
+        var totals = data.reduce(function(acc, row) {
+          return {
+            cal: acc.cal + (row.cal || 0),
+            protein: acc.protein + (row.protein || 0),
+            carbs: acc.carbs + (row.carbs || 0),
+            fat: acc.fat + (row.fat || 0),
+          };
+        }, { cal: 0, protein: 0, carbs: 0, fat: 0 });
+
+        setConsumed(totals);
+        setHistory(data.slice(0, 10).map(function(row) {
+          return { dbId: row.id, name: row.name, cal: row.cal, protein: row.protein, carbs: row.carbs, fat: row.fat };
+        }));
+      }
+      setLoading(false);
+    }
+    loadToday();
+  }, []);
 
   var calLeft = Math.max(0, TARGET.cal - consumed.cal);
   var proteinLeft = Math.max(0, TARGET.protein - consumed.protein);
@@ -240,19 +274,42 @@ export default function FuelFlow() {
     setTimeout(function() { setToast(null); }, 2600);
   }
 
-  function logItem(item) {
-    setHistory(function(h) { return [item].concat(h).slice(0, 10); });
+  async function logItem(item) {
+    var { data, error } = await supabase
+      .from("food_logs")
+      .insert({
+        name: item.name,
+        cal: item.cal || 0,
+        protein: item.protein || 0,
+        carbs: item.carbs || 0,
+        fat: item.fat || 0,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      showToast("Save failed: " + error.message);
+      return;
+    }
+
+    var saved = { dbId: data.id, name: data.name, cal: data.cal, protein: data.protein, carbs: data.carbs, fat: data.fat };
+    setHistory(function(h) { return [saved].concat(h).slice(0, 10); });
     setConsumed(function(c) {
-      return { cal: c.cal + item.cal, protein: c.protein + (item.protein||0), carbs: c.carbs + (item.carbs||0), fat: c.fat + (item.fat||0) };
+      return { cal: c.cal + data.cal, protein: c.protein + data.protein, carbs: c.carbs + data.carbs, fat: c.fat + data.fat };
     });
-    showToast("Logged " + item.name + " ++" + item.cal + " cal");
+    showToast("Logged " + data.name + " — +" + data.cal + " cal");
     setLogMode(null);
     setQuery("");
   }
 
-  function undo() {
+  async function undo() {
     if (!history.length) return;
     var last = history[0];
+
+    if (last.dbId) {
+      await supabase.from("food_logs").delete().eq("id", last.dbId);
+    }
+
     setHistory(function(h) { return h.slice(1); });
     setConsumed(function(c) {
       return { cal: Math.max(0, c.cal - last.cal), protein: Math.max(0, c.protein - (last.protein||0)), carbs: Math.max(0, c.carbs - (last.carbs||0)), fat: Math.max(0, c.fat - (last.fat||0)) };
@@ -282,6 +339,14 @@ export default function FuelFlow() {
   ];
 
   var filteredDB = query.length >= 2 ? FOOD_DB.filter(function(f) { return f.name.toLowerCase().indexOf(query.toLowerCase()) !== -1; }) : [];
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: S.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ fontSize: 14, color: S.dim }}>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: S.bg, fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif", color: S.text }}>
