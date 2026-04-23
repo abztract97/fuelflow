@@ -394,7 +394,14 @@ export default function FuelFlow() {
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
             <GhostBtn onClick={undo} disabled={!history.length}>Undo</GhostBtn>
-            <GhostBtn onClick={function() { setConsumed({ cal: 0, protein: 0, carbs: 0, fat: 0 }); setHistory([]); showToast("Day reset"); }}>Reset day</GhostBtn>
+            <GhostBtn onClick={async function() {
+              var startOfDay = new Date();
+              startOfDay.setHours(0, 0, 0, 0);
+              await supabase.from("food_logs").delete().gte("logged_at", startOfDay.toISOString());
+              setConsumed({ cal: 0, protein: 0, carbs: 0, fat: 0 });
+              setHistory([]);
+              showToast("Day reset");
+            }}>Reset day</GhostBtn>
           </div>
         </Card>
 
