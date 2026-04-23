@@ -63,16 +63,6 @@ const HOTBAR = [
   { id: "yogurt", emoji: "\uD83E\uDEFB", name: "Greek Yogurt", cal: 150, protein: 20, carbs: 9, fat: 4 },
 ];
 
-const FOOD_DB = [
-  { name: "Grilled Chicken Breast 6oz", cal: 280, protein: 53, carbs: 0, fat: 6 },
-  { name: "Avocado half", cal: 120, protein: 1, carbs: 6, fat: 11 },
-  { name: "Sweet Potato medium", cal: 130, protein: 3, carbs: 30, fat: 0 },
-  { name: "Tuna 1 can", cal: 100, protein: 22, carbs: 0, fat: 1 },
-  { name: "Black Beans 1 cup", cal: 227, protein: 15, carbs: 41, fat: 1 },
-  { name: "Cottage Cheese 1 cup", cal: 206, protein: 25, carbs: 8, fat: 9 },
-  { name: "Skirt Steak 6oz", cal: 320, protein: 44, carbs: 0, fat: 14 },
-  { name: "Oatmeal 1 cup cooked", cal: 158, protein: 6, carbs: 27, fat: 3 },
-];
 
 function Ring(props) {
   var value = props.value;
@@ -232,6 +222,8 @@ export default function FuelFlow() {
   var [selR, setSelR] = useState(null);
   var [logMode, setLogMode] = useState(null);
   var [query, setQuery] = useState("");
+  var [searchResults, setSearchResults] = useState([]);
+  var [searchLoading, setSearchLoading] = useState(false);
   var [toast, setToast] = useState(null);
 
   // Load today's logs from Supabase on mount
@@ -265,6 +257,36 @@ export default function FuelFlow() {
     }
     loadToday();
   }, []);
+
+  useEffect(function() {
+    if (query.length < 2) { setSearchResults([]); return; }
+    var cancelled = false;
+    var timer = setTimeout(async function() {
+      setSearchLoading(true);
+      try {
+        var url = "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" + encodeURIComponent(query) + "&json=1&page_size=8&fields=product_name,nutriments";
+        var res = await fetch(url);
+        var json = await res.json();
+        if (cancelled) return;
+        var results = (json.products || [])
+          .filter(function(p) { return p.product_name && p.nutriments; })
+          .map(function(p) {
+            return {
+              name: p.product_name,
+              cal: Math.round(p.nutriments["energy-kcal_100g"] || 0),
+              protein: Math.round(p.nutriments["proteins_100g"] || 0),
+              carbs: Math.round(p.nutriments["carbohydrates_100g"] || 0),
+              fat: Math.round(p.nutriments["fat_100g"] || 0),
+            };
+          });
+        setSearchResults(results);
+      } catch (e) {
+        if (!cancelled) setSearchResults([]);
+      }
+      if (!cancelled) setSearchLoading(false);
+    }, 400);
+    return function() { cancelled = true; clearTimeout(timer); };
+  }, [query]);
 
   var calLeft = Math.max(0, TARGET.cal - consumed.cal);
   var proteinLeft = Math.max(0, TARGET.protein - consumed.protein);
@@ -338,7 +360,6 @@ export default function FuelFlow() {
     { label: "Fat", val: consumed.fat, target: TARGET.fat, color: S.purple },
   ];
 
-  var filteredDB = query.length >= 2 ? FOOD_DB.filter(function(f) { return f.name.toLowerCase().indexOf(query.toLowerCase()) !== -1; }) : [];
 
   if (loading) {
     return (
@@ -449,14 +470,20 @@ export default function FuelFlow() {
               {query.length < 2 && (
                 <div style={{ fontSize: 13, color: S.dim, textAlign: "center", padding: "18px 0" }}>Type to search...</div>
               )}
-              {filteredDB.map(function(item, i) {
+              {query.length >= 2 && searchLoading && (
+                <div style={{ fontSize: 13, color: S.dim, textAlign: "center", padding: "18px 0" }}>Searching...</div>
+              )}
+              {query.length >= 2 && !searchLoading && searchResults.length === 0 && (
+                <div style={{ fontSize: 13, color: S.dim, textAlign: "center", padding: "18px 0" }}>No results found</div>
+              )}
+              {searchResults.map(function(item, i) {
                 return (
-                  <div key={i} onClick={function() { logItem(Object.assign({}, item, { id: item.name })); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 0", borderBottom: "1px solid " + S.border, gap: 12, cursor: "pointer" }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
+                  <div key={i} onClick={function() { logItem(item); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 0", borderBottom: "1px solid " + S.border, gap: 12, cursor: "pointer" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
                       <MacroRow cal={item.cal} protein={item.protein} carbs={item.carbs} fat={item.fat} />
                     </div>
-                    <LogBtn label="+ Add" onClick={function() { logItem(Object.assign({}, item, { id: item.name })); }} />
+                    <LogBtn label="+ Add" onClick={function(e) { e.stopPropagation(); logItem(item); }} />
                   </div>
                 );
               })}
