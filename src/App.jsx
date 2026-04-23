@@ -264,23 +264,27 @@ export default function FuelFlow() {
     var timer = setTimeout(async function() {
       setSearchLoading(true);
       try {
-        var url = "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" + encodeURIComponent(query) + "&json=1&page_size=8&fields=product_name,nutriments";
+        var apiKey = import.meta.env.VITE_USDA_API_KEY;
+        var url = "https://api.nal.usda.gov/fdc/v1/foods/search?query=" + encodeURIComponent(query) + "&api_key=" + apiKey + "&pageSize=8";
         var res = await fetch(url);
         var json = await res.json();
+        console.log("USDA raw response:", json);
         if (cancelled) return;
-        var results = (json.products || [])
-          .filter(function(p) { return p.product_name && p.nutriments; })
-          .map(function(p) {
-            return {
-              name: p.product_name,
-              cal: Math.round(p.nutriments["energy-kcal_100g"] || 0),
-              protein: Math.round(p.nutriments["proteins_100g"] || 0),
-              carbs: Math.round(p.nutriments["carbohydrates_100g"] || 0),
-              fat: Math.round(p.nutriments["fat_100g"] || 0),
-            };
-          });
+        var results = (json.foods || []).map(function(p) {
+          var n = {};
+          (p.foodNutrients || []).forEach(function(fn) { n[fn.nutrientId] = fn.value; });
+          return {
+            name: p.description,
+            cal: Math.round(n[1008] || 0),
+            protein: Math.round(n[1003] || 0),
+            carbs: Math.round(n[1005] || 0),
+            fat: Math.round(n[1004] || 0),
+          };
+        });
+        console.log("Parsed results:", results);
         setSearchResults(results);
       } catch (e) {
+        console.error("Search error:", e);
         if (!cancelled) setSearchResults([]);
       }
       if (!cancelled) setSearchLoading(false);
