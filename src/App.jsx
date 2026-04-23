@@ -354,7 +354,7 @@ export default function FuelFlow() {
 
         <div style={{ padding: "48px 8px 0" }}>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".09em", color: S.dim, textTransform: "uppercase", marginBottom: 6 }}>
-            Tuesday, April 21
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
           </div>
           <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-.03em", lineHeight: 1.2, marginBottom: 14 }}>
             Good afternoon, Francisco.
