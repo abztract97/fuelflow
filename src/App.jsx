@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase.js";
 
 const S = {
@@ -69,7 +69,7 @@ function Ring(props) {
   var max = props.max;
   var color = props.color;
   var size = props.size || 56;
-  var stroke = 4;
+  var stroke = props.stroke || 4;
   var r = (size - stroke * 2) / 2;
   var circ = 2 * Math.PI * r;
   var pct = Math.min(value / max, 1);
@@ -242,7 +242,117 @@ function SearchResultRow(props) {
   );
 }
 
+function MovementTab() {
+  var [steps, setSteps] = useState(0);
+  var [permState, setPermState] = useState("idle");
+  var stepRef = useRef({ lastTime: 0, peaking: false });
+  var STEP_GOAL = 10000;
+
+  useEffect(function() {
+    if (typeof DeviceMotionEvent === "undefined") { setPermState("unavailable"); return; }
+    if (typeof DeviceMotionEvent.requestPermission !== "function") {
+      setPermState("listening");
+    }
+  }, []);
+
+  useEffect(function() {
+    if (permState !== "listening") return;
+    function handleMotion(e) {
+      var acc = e.accelerationIncludingGravity;
+      if (!acc) return;
+      var mag = Math.sqrt((acc.x||0)*(acc.x||0) + (acc.y||0)*(acc.y||0) + (acc.z||0)*(acc.z||0));
+      var now = Date.now();
+      var r = stepRef.current;
+      if (!r.peaking && mag > 12 && now - r.lastTime > 300) {
+        r.peaking = true;
+      } else if (r.peaking && mag < 10) {
+        r.peaking = false;
+        r.lastTime = now;
+        setSteps(function(s) { return s + 1; });
+      }
+    }
+    window.addEventListener("devicemotion", handleMotion);
+    return function() { window.removeEventListener("devicemotion", handleMotion); };
+  }, [permState]);
+
+  async function requestPermission() {
+    try {
+      var result = await DeviceMotionEvent.requestPermission();
+      setPermState(result === "granted" ? "listening" : "denied");
+    } catch(e) { setPermState("denied"); }
+  }
+
+  var calBurned = Math.round(steps * 0.04);
+  var distance = (steps * 0.000473).toFixed(2);
+  var activeMins = Math.round(steps / 100);
+  var ringSize = 200;
+  var ringStroke = 12;
+
+  return (
+    <div style={{ padding: "48px 8px 0" }}>
+      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".09em", color: S.dim, textTransform: "uppercase", marginBottom: 6 }}>
+        {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+      </div>
+      <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-.03em", lineHeight: 1.2, marginBottom: 20 }}>
+        Movement
+      </div>
+
+      <div style={{ background: S.surface, border: "1px solid " + S.border, borderRadius: 22, padding: "28px 20px 24px", marginBottom: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+            <Ring value={steps} max={STEP_GOAL} color={S.orange} size={ringSize} stroke={ringStroke} />
+            <div style={{ position: "absolute", textAlign: "center" }}>
+              <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: "-.03em", color: S.orange }}>{steps.toLocaleString()}</div>
+              <div style={{ fontSize: 12, color: S.muted, fontWeight: 600 }}>steps</div>
+            </div>
+          </div>
+          <div style={{ fontSize: 13, color: S.dim }}>
+            {steps.toLocaleString()} / {STEP_GOAL.toLocaleString()} goal
+            {steps >= STEP_GOAL && <span style={{ color: S.orange, fontWeight: 700, marginLeft: 8 }}>Goal reached!</span>}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "space-around", marginTop: 24, paddingTop: 20, borderTop: "1px solid " + S.border }}>
+          {[
+            { label: "Cal Burned", val: calBurned, unit: "kcal", color: S.orange },
+            { label: "Distance", val: distance, unit: "mi", color: S.blue },
+            { label: "Active", val: activeMins, unit: "min", color: S.green },
+          ].map(function(stat) {
+            return (
+              <div key={stat.label} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: stat.color, letterSpacing: "-.02em" }}>{stat.val}</div>
+                <div style={{ fontSize: 11, color: S.dim, marginTop: 1 }}>{stat.unit}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: S.muted, marginTop: 2 }}>{stat.label}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {permState === "idle" && typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function" && (
+        <div style={{ background: S.surface, border: "1px solid " + S.border, borderRadius: 22, padding: "20px", marginBottom: 12, textAlign: "center" }}>
+          <div style={{ fontSize: 14, color: S.muted, marginBottom: 16 }}>Enable motion tracking to count steps</div>
+          <button onClick={requestPermission} style={{ background: S.orange, border: "none", color: "#fff", borderRadius: 14, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            Enable Motion Tracking
+          </button>
+        </div>
+      )}
+      {permState === "denied" && (
+        <div style={{ background: S.surface, border: "1px solid " + S.border, borderRadius: 22, padding: "20px", textAlign: "center" }}>
+          <div style={{ fontSize: 13, color: S.dim }}>Motion access denied. Enable it in Settings to count steps.</div>
+        </div>
+      )}
+      {permState === "unavailable" && (
+        <div style={{ background: S.surface, border: "1px solid " + S.border, borderRadius: 22, padding: "20px", textAlign: "center" }}>
+          <div style={{ fontSize: 13, color: S.dim }}>Step counting requires a mobile device with a motion sensor.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FuelFlow() {
+  var [tab, setTab] = useState("nutrition");
   var [consumed, setConsumed] = useState({ cal: 0, protein: 0, carbs: 0, fat: 0 });
   var [history, setHistory] = useState([]);
   var [loading, setLoading] = useState(true);
@@ -416,9 +526,26 @@ export default function FuelFlow() {
     );
   }
 
+  var tabBar = (
+    <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.92)", backdropFilter: "blur(20px)", borderTop: "1px solid " + S.border, display: "flex", zIndex: 100 }}>
+      {[{ id: "nutrition", emoji: "🍽️", label: "Nutrition" }, { id: "movement", emoji: "🏃", label: "Movement" }].map(function(t) {
+        var active = tab === t.id;
+        return (
+          <button key={t.id} onClick={function() { setTab(t.id); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: "10px 0 18px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+            <span style={{ fontSize: 22 }}>{t.emoji}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".04em", color: active ? S.orange : S.dim }}>{t.label}</span>
+            {active && <span style={{ width: 18, height: 2, borderRadius: 999, background: S.orange, marginTop: 1 }} />}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div style={{ minHeight: "100vh", background: S.bg, fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif", color: S.text }}>
-      <div style={{ maxWidth: 430, margin: "0 auto", padding: "0 14px 80px" }}>
+      <div style={{ maxWidth: 430, margin: "0 auto", padding: "0 14px 100px" }}>
+        {tab === "movement" && <MovementTab />}
+        {tab === "nutrition" && <div>
 
         <div style={{ padding: "48px 8px 0" }}>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".09em", color: S.dim, textTransform: "uppercase", marginBottom: 6 }}>
@@ -635,9 +762,11 @@ export default function FuelFlow() {
           })}
         </Card>
 
+        </div>}
       </div>
+      {tabBar}
       {toast && (
-        <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "rgba(28,28,30,0.95)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: "12px 20px", fontSize: 13, fontWeight: 500, color: S.text, whiteSpace: "nowrap", zIndex: 999, boxShadow: "0 8px 32px rgba(0,0,0,.6)" }}>
+        <div style={{ position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)", background: "rgba(28,28,30,0.95)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: "12px 20px", fontSize: 13, fontWeight: 500, color: S.text, whiteSpace: "nowrap", zIndex: 999, boxShadow: "0 8px 32px rgba(0,0,0,.6)" }}>
           {toast}
         </div>
       )}
