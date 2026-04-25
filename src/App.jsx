@@ -214,6 +214,34 @@ function ManualEntry(props) {
   );
 }
 
+function SearchResultRow(props) {
+  var item = props.item;
+  var onLog = props.onLog;
+  var [qty, setQty] = useState(1);
+  var qtyBtnStyle = { background: S.surface2, border: "1px solid " + S.border2, color: S.text, borderRadius: 6, width: 26, height: 26, fontSize: 16, lineHeight: "26px", textAlign: "center", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 };
+  return (
+    <div style={{ padding: "13px 0", borderBottom: "1px solid " + S.border }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, lineHeight: 1.35 }}>{item.name}</div>
+          <div style={{ fontSize: 11, color: S.dim }}>per {item.serving}</div>
+        </div>
+        <LogBtn label="+ Add" onClick={function() {
+          onLog({ name: item.name, cal: Math.round(item.cal * qty), protein: Math.round(item.protein * qty), carbs: Math.round(item.carbs * qty), fat: Math.round(item.fat * qty) });
+        }} />
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <MacroRow cal={Math.round(item.cal * qty)} protein={Math.round(item.protein * qty)} carbs={Math.round(item.carbs * qty)} fat={Math.round(item.fat * qty)} />
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <button style={qtyBtnStyle} onClick={function() { setQty(function(q) { return Math.max(1, q - 1); }); }}>−</button>
+          <span style={{ fontSize: 13, fontWeight: 700, minWidth: 16, textAlign: "center" }}>{qty}</span>
+          <button style={qtyBtnStyle} onClick={function() { setQty(function(q) { return q + 1; }); }}>+</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FuelFlow() {
   var [consumed, setConsumed] = useState({ cal: 0, protein: 0, carbs: 0, fat: 0 });
   var [history, setHistory] = useState([]);
@@ -265,7 +293,7 @@ export default function FuelFlow() {
       setSearchLoading(true);
       try {
         var apiKey = import.meta.env.VITE_USDA_API_KEY;
-        var url = "https://api.nal.usda.gov/fdc/v1/foods/search?query=" + encodeURIComponent(query) + "&api_key=" + apiKey + "&pageSize=8";
+        var url = "https://api.nal.usda.gov/fdc/v1/foods/search?query=" + encodeURIComponent(query) + "&api_key=" + apiKey + "&pageSize=20&dataType=SR%20Legacy,Foundation,Branded";
         var res = await fetch(url);
         var json = await res.json();
         console.log("USDA raw response:", json);
@@ -273,14 +301,29 @@ export default function FuelFlow() {
         var results = (json.foods || []).map(function(p) {
           var n = {};
           (p.foodNutrients || []).forEach(function(fn) { n[fn.nutrientId] = fn.value; });
+          var unitMap = { GRM: "g", MLT: "ml", LBR: "lb", OZ: "oz", MGM: "mg", KJO: "kJ", ONZ: "oz", GCAL: "kcal" };
+          var rawUnit = (p.servingSizeUnit || "g").toUpperCase().trim();
+          var unit = unitMap[rawUnit] || rawUnit.toLowerCase();
+          var serving = p.servingSize ? Math.round(p.servingSize) + unit : "100g";
+          var desc = p.description
+            ? p.description.charAt(0).toUpperCase() + p.description.slice(1).toLowerCase()
+            : "";
+          var brand = p.brandName || p.brandOwner || "";
+          var name = brand ? desc + " — " + brand : desc;
+          var priority = p.dataType === "SR Legacy" ? 0 : p.dataType === "Foundation" ? 1 : 2;
           return {
-            name: p.description,
+            name: name,
+            serving: serving,
             cal: Math.round(n[1008] || 0),
             protein: Math.round(n[1003] || 0),
             carbs: Math.round(n[1005] || 0),
             fat: Math.round(n[1004] || 0),
+            priority: priority,
           };
-        });
+        })
+        .sort(function(a, b) { return a.priority - b.priority; })
+        .slice(0, 8)
+        .map(function(r) { delete r.priority; return r; });
         console.log("Parsed results:", results);
         setSearchResults(results);
       } catch (e) {
@@ -481,15 +524,7 @@ export default function FuelFlow() {
                 <div style={{ fontSize: 13, color: S.dim, textAlign: "center", padding: "18px 0" }}>No results found</div>
               )}
               {searchResults.map(function(item, i) {
-                return (
-                  <div key={i} onClick={function() { logItem(item); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 0", borderBottom: "1px solid " + S.border, gap: 12, cursor: "pointer" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                      <MacroRow cal={item.cal} protein={item.protein} carbs={item.carbs} fat={item.fat} />
-                    </div>
-                    <LogBtn label="+ Add" onClick={function(e) { e.stopPropagation(); logItem(item); }} />
-                  </div>
-                );
+                return <SearchResultRow key={i} item={item} onLog={logItem} />;
               })}
             </div>
           )}
