@@ -507,14 +507,6 @@ export default function FuelFlow() {
   ];
 
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: S.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ fontSize: 14, color: S.dim }}>Loading...</div>
-      </div>
-    );
-  }
-
   useEffect(function() {
     var el = heroInnerRef.current;
     if (!el || !el.parentElement) return;
@@ -522,6 +514,14 @@ export default function FuelFlow() {
     el.style.transition = "transform 0.35s cubic-bezier(0.4,0,0.2,1)";
     el.style.transform = "translateX(" + (-heroPage * w) + "px)";
   }, [heroPage]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: S.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ fontSize: 14, color: S.dim }}>Loading...</div>
+      </div>
+    );
+  }
 
   function heroSnap(page) {
     var el = heroInnerRef.current;
