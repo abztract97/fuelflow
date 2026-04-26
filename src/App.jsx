@@ -289,70 +289,59 @@ function MovementTab() {
   var ringStroke = 12;
 
   return (
-    <div style={{ padding: "48px 8px 0" }}>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".09em", color: S.dim, textTransform: "uppercase", marginBottom: 6 }}>
-        {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-      </div>
-      <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-.03em", lineHeight: 1.2, marginBottom: 20 }}>
-        Movement
+    <div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+          <Ring value={steps} max={STEP_GOAL} color={S.orange} size={ringSize} stroke={ringStroke} />
+          <div style={{ position: "absolute", textAlign: "center" }}>
+            <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: "-.03em", color: S.orange }}>{steps.toLocaleString()}</div>
+            <div style={{ fontSize: 12, color: S.muted, fontWeight: 600 }}>steps</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 13, color: S.dim }}>
+          {steps.toLocaleString()} / {STEP_GOAL.toLocaleString()} goal
+          {steps >= STEP_GOAL && <span style={{ color: S.orange, fontWeight: 700, marginLeft: 8 }}>Goal reached!</span>}
+        </div>
       </div>
 
-      <div style={{ background: S.surface, border: "1px solid " + S.border, borderRadius: 22, padding: "28px 20px 24px", marginBottom: 12 }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-            <Ring value={steps} max={STEP_GOAL} color={S.orange} size={ringSize} stroke={ringStroke} />
-            <div style={{ position: "absolute", textAlign: "center" }}>
-              <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: "-.03em", color: S.orange }}>{steps.toLocaleString()}</div>
-              <div style={{ fontSize: 12, color: S.muted, fontWeight: 600 }}>steps</div>
+      <div style={{ display: "flex", justifyContent: "space-around", paddingTop: 20, borderTop: "1px solid " + S.border }}>
+        {[
+          { label: "Cal Burned", val: calBurned, unit: "kcal", color: S.orange },
+          { label: "Distance", val: distance, unit: "mi", color: S.blue },
+          { label: "Active", val: activeMins, unit: "min", color: S.green },
+        ].map(function(stat) {
+          return (
+            <div key={stat.label} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: stat.color, letterSpacing: "-.02em" }}>{stat.val}</div>
+              <div style={{ fontSize: 11, color: S.dim, marginTop: 1 }}>{stat.unit}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: S.muted, marginTop: 2 }}>{stat.label}</div>
             </div>
-          </div>
-          <div style={{ fontSize: 13, color: S.dim }}>
-            {steps.toLocaleString()} / {STEP_GOAL.toLocaleString()} goal
-            {steps >= STEP_GOAL && <span style={{ color: S.orange, fontWeight: 700, marginLeft: 8 }}>Goal reached!</span>}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "space-around", marginTop: 24, paddingTop: 20, borderTop: "1px solid " + S.border }}>
-          {[
-            { label: "Cal Burned", val: calBurned, unit: "kcal", color: S.orange },
-            { label: "Distance", val: distance, unit: "mi", color: S.blue },
-            { label: "Active", val: activeMins, unit: "min", color: S.green },
-          ].map(function(stat) {
-            return (
-              <div key={stat.label} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: stat.color, letterSpacing: "-.02em" }}>{stat.val}</div>
-                <div style={{ fontSize: 11, color: S.dim, marginTop: 1 }}>{stat.unit}</div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: S.muted, marginTop: 2 }}>{stat.label}</div>
-              </div>
-            );
-          })}
-        </div>
+          );
+        })}
       </div>
 
       {permState === "idle" && typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function" && (
-        <div style={{ background: S.surface, border: "1px solid " + S.border, borderRadius: 22, padding: "20px", marginBottom: 12, textAlign: "center" }}>
-          <div style={{ fontSize: 14, color: S.muted, marginBottom: 16 }}>Enable motion tracking to count steps</div>
-          <button onClick={requestPermission} style={{ background: S.orange, border: "none", color: "#fff", borderRadius: 14, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+        <div style={{ textAlign: "center", marginTop: 20 }}>
+          <div style={{ fontSize: 13, color: S.muted, marginBottom: 12 }}>Enable motion tracking to count steps</div>
+          <button onClick={requestPermission} style={{ background: S.orange, border: "none", color: "#fff", borderRadius: 14, padding: "11px 24px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Enable Motion Tracking
           </button>
         </div>
       )}
       {permState === "denied" && (
-        <div style={{ background: S.surface, border: "1px solid " + S.border, borderRadius: 22, padding: "20px", textAlign: "center" }}>
-          <div style={{ fontSize: 13, color: S.dim }}>Motion access denied. Enable it in Settings to count steps.</div>
-        </div>
+        <div style={{ fontSize: 13, color: S.dim, textAlign: "center", marginTop: 20 }}>Motion access denied. Enable it in Settings to count steps.</div>
       )}
       {permState === "unavailable" && (
-        <div style={{ background: S.surface, border: "1px solid " + S.border, borderRadius: 22, padding: "20px", textAlign: "center" }}>
-          <div style={{ fontSize: 13, color: S.dim }}>Step counting requires a mobile device with a motion sensor.</div>
-        </div>
+        <div style={{ fontSize: 13, color: S.dim, textAlign: "center", marginTop: 20 }}>Step counting requires a mobile device with a motion sensor.</div>
       )}
     </div>
   );
 }
 
 export default function FuelFlow() {
-  var [tab, setTab] = useState("nutrition");
+  var [heroPage, setHeroPage] = useState(0);
+  var heroInnerRef = useRef(null);
+  var heroDragRef = useRef({ startX: 0, dragging: false, dx: 0, isHoriz: null });
   var [consumed, setConsumed] = useState({ cal: 0, protein: 0, carbs: 0, fat: 0 });
   var [history, setHistory] = useState([]);
   var [loading, setLoading] = useState(true);
@@ -526,26 +515,56 @@ export default function FuelFlow() {
     );
   }
 
-  var tabBar = (
-    <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.92)", backdropFilter: "blur(20px)", borderTop: "1px solid " + S.border, display: "flex", zIndex: 100 }}>
-      {[{ id: "nutrition", emoji: "🍽️", label: "Nutrition" }, { id: "movement", emoji: "🏃", label: "Movement" }].map(function(t) {
-        var active = tab === t.id;
-        return (
-          <button key={t.id} onClick={function() { setTab(t.id); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: "10px 0 18px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-            <span style={{ fontSize: 22 }}>{t.emoji}</span>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".04em", color: active ? S.orange : S.dim }}>{t.label}</span>
-            {active && <span style={{ width: 18, height: 2, borderRadius: 999, background: S.orange, marginTop: 1 }} />}
-          </button>
-        );
-      })}
-    </div>
-  );
+  useEffect(function() {
+    var el = heroInnerRef.current;
+    if (!el || !el.parentElement) return;
+    var w = el.parentElement.offsetWidth;
+    el.style.transition = "transform 0.35s cubic-bezier(0.4,0,0.2,1)";
+    el.style.transform = "translateX(" + (-heroPage * w) + "px)";
+  }, [heroPage]);
+
+  function heroSnap(page) {
+    var el = heroInnerRef.current;
+    if (!el || !el.parentElement) return;
+    var w = el.parentElement.offsetWidth;
+    el.style.transition = "transform 0.35s cubic-bezier(0.4,0,0.2,1)";
+    el.style.transform = "translateX(" + (-page * w) + "px)";
+  }
+  function heroDragStart(clientX) {
+    heroDragRef.current = { startX: clientX, dragging: true, dx: 0, isHoriz: null };
+  }
+  function heroDragMove(clientX, clientY) {
+    var d = heroDragRef.current;
+    if (!d.dragging) return;
+    var dx = clientX - d.startX;
+    if (d.isHoriz === null) {
+      var dy = clientY - (d.startY || clientY);
+      d.isHoriz = Math.abs(dx) > Math.abs(dy);
+    }
+    if (!d.isHoriz) return;
+    d.dx = dx;
+    var el = heroInnerRef.current;
+    if (el && el.parentElement) {
+      var w = el.parentElement.offsetWidth;
+      var clamped = Math.max(Math.min(dx, w * 0.5), -w * 0.5);
+      el.style.transition = "none";
+      el.style.transform = "translateX(" + (-heroPage * w + clamped) + "px)";
+    }
+  }
+  function heroDragEnd() {
+    var d = heroDragRef.current;
+    if (!d.dragging) return;
+    d.dragging = false;
+    var newPage = heroPage;
+    if (d.dx < -50 && heroPage < 1) newPage = 1;
+    else if (d.dx > 50 && heroPage > 0) newPage = 0;
+    heroSnap(newPage);
+    if (newPage !== heroPage) setHeroPage(newPage);
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: S.bg, fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif", color: S.text }}>
-      <div style={{ maxWidth: 430, margin: "0 auto", padding: "0 14px 100px" }}>
-        {tab === "movement" && <MovementTab />}
-        {tab === "nutrition" && <div>
+      <div style={{ maxWidth: 430, margin: "0 auto", padding: "0 14px 80px" }}>
 
         <div style={{ padding: "48px 8px 0" }}>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".09em", color: S.dim, textTransform: "uppercase", marginBottom: 6 }}>
@@ -561,42 +580,65 @@ export default function FuelFlow() {
         </div>
 
         <Card>
-          <div style={{ textAlign: "center", position: "relative" }}>
-            <CalArc consumed={consumed.cal} target={TARGET.cal} />
-            <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 44, fontWeight: 900, letterSpacing: "-.04em", color: S.orange }}>
-                {consumed.cal}
+          <div
+            style={{ overflow: "hidden", margin: "-22px -20px", borderRadius: 22, touchAction: "pan-y", userSelect: "none" }}
+            onTouchStart={function(e) { var t = e.touches[0]; heroDragRef.current.startY = t.clientY; heroDragStart(t.clientX); }}
+            onTouchMove={function(e) { heroDragMove(e.touches[0].clientX, e.touches[0].clientY); }}
+            onTouchEnd={heroDragEnd}
+            onMouseDown={function(e) { heroDragRef.current.startY = e.clientY; heroDragStart(e.clientX); }}
+            onMouseMove={function(e) { heroDragMove(e.clientX, e.clientY); }}
+            onMouseUp={heroDragEnd}
+            onMouseLeave={heroDragEnd}
+          >
+            <div ref={heroInnerRef} style={{ display: "flex", willChange: "transform" }}>
+              <div style={{ minWidth: "100%", flexShrink: 0, padding: "22px 20px" }}>
+                <div style={{ textAlign: "center", position: "relative" }}>
+                  <CalArc consumed={consumed.cal} target={TARGET.cal} />
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 44, fontWeight: 900, letterSpacing: "-.04em", color: S.orange }}>{consumed.cal}</div>
+                    <div style={{ fontSize: 13, color: S.muted, marginTop: 4 }}>
+                      of {TARGET.cal} cal
+                      <span style={{ color: S.orange, fontWeight: 600, marginLeft: 8 }}>{calLeft} left</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-around", marginTop: 20, paddingTop: 20, borderTop: "1px solid " + S.border }}>
+                  {macros.map(function(m) {
+                    return (
+                      <div key={m.label} style={{ textAlign: "center" }}>
+                        <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
+                          <Ring value={m.val} max={m.target} color={m.color} />
+                          <div style={{ position: "absolute", fontSize: 11, fontWeight: 700, color: m.color }}>{m.val}g</div>
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: S.muted }}>{m.label}</div>
+                        <div style={{ fontSize: 10, color: S.dim, marginTop: 1 }}>{m.target}g goal</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+                  <GhostBtn onClick={undo} disabled={!history.length}>Undo</GhostBtn>
+                  <GhostBtn onClick={async function() {
+                    var startOfDay = new Date();
+                    startOfDay.setHours(0, 0, 0, 0);
+                    await supabase.from("food_logs").delete().gte("logged_at", startOfDay.toISOString());
+                    setConsumed({ cal: 0, protein: 0, carbs: 0, fat: 0 });
+                    setHistory([]);
+                    showToast("Day reset");
+                  }}>Reset day</GhostBtn>
+                </div>
               </div>
-              <div style={{ fontSize: 13, color: S.muted, marginTop: 4 }}>
-                of {TARGET.cal} cal
-                <span style={{ color: S.orange, fontWeight: 600, marginLeft: 8 }}>{calLeft} left</span>
+              <div style={{ minWidth: "100%", flexShrink: 0, padding: "22px 20px" }}>
+                <MovementTab />
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-around", marginTop: 20, paddingTop: 20, borderTop: "1px solid " + S.border }}>
-            {macros.map(function(m) {
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 16 }}>
+            {[0, 1].map(function(i) {
               return (
-                <div key={m.label} style={{ textAlign: "center" }}>
-                  <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
-                    <Ring value={m.val} max={m.target} color={m.color} />
-                    <div style={{ position: "absolute", fontSize: 11, fontWeight: 700, color: m.color }}>{m.val}g</div>
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: S.muted }}>{m.label}</div>
-                  <div style={{ fontSize: 10, color: S.dim, marginTop: 1 }}>{m.target}g goal</div>
-                </div>
+                <div key={i} onClick={function() { setHeroPage(i); }} style={{ width: heroPage === i ? 18 : 6, height: 6, borderRadius: 999, background: heroPage === i ? S.orange : S.dim, transition: "all 0.25s ease", cursor: "pointer" }} />
               );
             })}
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-            <GhostBtn onClick={undo} disabled={!history.length}>Undo</GhostBtn>
-            <GhostBtn onClick={async function() {
-              var startOfDay = new Date();
-              startOfDay.setHours(0, 0, 0, 0);
-              await supabase.from("food_logs").delete().gte("logged_at", startOfDay.toISOString());
-              setConsumed({ cal: 0, protein: 0, carbs: 0, fat: 0 });
-              setHistory([]);
-              showToast("Day reset");
-            }}>Reset day</GhostBtn>
           </div>
         </Card>
 
@@ -762,11 +804,9 @@ export default function FuelFlow() {
           })}
         </Card>
 
-        </div>}
       </div>
-      {tabBar}
       {toast && (
-        <div style={{ position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)", background: "rgba(28,28,30,0.95)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: "12px 20px", fontSize: 13, fontWeight: 500, color: S.text, whiteSpace: "nowrap", zIndex: 999, boxShadow: "0 8px 32px rgba(0,0,0,.6)" }}>
+        <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "rgba(28,28,30,0.95)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: "12px 20px", fontSize: 13, fontWeight: 500, color: S.text, whiteSpace: "nowrap", zIndex: 999, boxShadow: "0 8px 32px rgba(0,0,0,.6)" }}>
           {toast}
         </div>
       )}
