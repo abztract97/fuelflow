@@ -304,7 +304,7 @@ function MovementTab() {
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-around", paddingTop: 20, borderTop: "1px solid " + S.border }}>
+      <div style={{ display: "flex", justifyContent: "space-around", paddingTop: 20, borderTop: "1px solid " + S.border, width: "100%" }}>
         {[
           { label: "Cal Burned", val: calBurned, unit: "kcal", color: S.orange },
           { label: "Distance", val: distance, unit: "mi", color: S.blue },
@@ -581,7 +581,7 @@ export default function FuelFlow() {
 
         <Card>
           <div
-            style={{ overflow: "hidden", margin: "-22px -20px", borderRadius: 22, touchAction: "pan-y", userSelect: "none" }}
+            style={{ overflow: "hidden", touchAction: "pan-y", userSelect: "none" }}
             onTouchStart={function(e) { var t = e.touches[0]; heroDragRef.current.startY = t.clientY; heroDragStart(t.clientX); }}
             onTouchMove={function(e) { heroDragMove(e.touches[0].clientX, e.touches[0].clientY); }}
             onTouchEnd={heroDragEnd}
@@ -590,8 +590,8 @@ export default function FuelFlow() {
             onMouseUp={heroDragEnd}
             onMouseLeave={heroDragEnd}
           >
-            <div ref={heroInnerRef} style={{ display: "flex", willChange: "transform" }}>
-              <div style={{ minWidth: "100%", flexShrink: 0, padding: "22px 20px" }}>
+            <div ref={heroInnerRef} style={{ display: "flex", width: "200%", willChange: "transform" }}>
+              <div style={{ width: "50%", flexShrink: 0, boxSizing: "border-box" }}>
                 <div style={{ textAlign: "center", position: "relative" }}>
                   <CalArc consumed={consumed.cal} target={TARGET.cal} />
                   <div style={{ marginTop: 8 }}>
@@ -628,7 +628,7 @@ export default function FuelFlow() {
                   }}>Reset day</GhostBtn>
                 </div>
               </div>
-              <div style={{ minWidth: "100%", flexShrink: 0, padding: "22px 20px" }}>
+              <div style={{ width: "50%", flexShrink: 0, boxSizing: "border-box" }}>
                 <MovementTab />
               </div>
             </div>
